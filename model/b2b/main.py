@@ -5,6 +5,7 @@ from boost2block_logistic import *
 import time
 import sys
 import argparse
+from utils import data_path
 
 def load_data_file(train_data_file):
     '''
@@ -20,8 +21,7 @@ def load_data_file(train_data_file):
 
 
 if __name__=='__main__':
-    datapath='/home/zju/dgl/dataset/recommend/ml-100k/'
-    
+
     parser = argparse.ArgumentParser()
     
     parser.add_argument('-flod_name', help='Training flod file. e.g u1', dest='flod_name', default='u1')   
@@ -43,9 +43,10 @@ if __name__=='__main__':
     
     print '############Begin#############'
     
-#     flod_name=args.flod_name
+    flod_name=args.flod_name
     
     flod_name='bpr'
+    datapath = data_path.ml_100k
     #train_data_file = datapath+'bpr_orderd_short.pkl'
     train_data_file = datapath+'from_synthetic_data_csv.pkl'
     

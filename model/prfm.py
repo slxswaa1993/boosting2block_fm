@@ -11,6 +11,7 @@ import sys,os
 import math
 import time,datetime
 from  eval.auc import *
+from utils import data_path
 
 
 def getXI(W, V, P, Q):
@@ -225,7 +226,7 @@ def load_data_file(train_data_file):
 
 if __name__=="__main__":
 
-    datapath = '../data/data_set/ml-100k/'
+    datapath = data_path.ml_100k
     train_data_file = datapath + 'from_synthetic_data_csv.pkl'
     X_ci, X_cj = load_data_file(train_data_file)
 
