@@ -206,7 +206,7 @@ def trian_MBGD(latent_dim, input_dim, X_ci, X_cj, w_lambda, v_lambda, eta, batch
         #                     print("Step:%d,loss:%.5f"%(batch_count,obj_fun_loss))
         #             print 'saving...'
         #             save_model(W,V,ep,modelPath)
-        if ep % 2 == 0:
+        if ep % 10 == 0:
             uc = predic_auc(W, np.dot(V, V.T))
             print("epoc:%d,auc:%.5f" % (ep, uc))
     return W, V
