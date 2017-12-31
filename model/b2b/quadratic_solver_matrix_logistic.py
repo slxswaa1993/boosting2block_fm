@@ -51,7 +51,7 @@ class QuadraticSolver():
     #######################################################
     
     @staticmethod
-    def getG_ration(W, W_old,P,Q,C):
+    def getG_ration(W, W_old,P,Q):
         '''
         :return G matrix (N,1)
         '''
@@ -61,7 +61,7 @@ class QuadraticSolver():
         return np.mat(np.array([1.]*num).reshape(num,1)) 
         
         ########下面为正常代码######
-        temp=P-Q+C    
+        temp=P-Q
         current=np.exp(-temp.dot(W).todense())
         old=np.exp(-temp.dot(W_old).todense())       
         G=current/old
@@ -224,9 +224,9 @@ class QuadraticSolver():
         
 
     @staticmethod
-    def get_G_H(W, W_old, z_t,X_uv, X_uf,C):
+    def get_G_H(W, W_old, z_t,X_uv, X_uf):
 
-        G=QuadraticSolver.getG_ration(W, W_old, X_uv, X_uf,C)
+        G=QuadraticSolver.getG_ration(W, W_old, X_uv, X_uf)
 
         H=QuadraticSolver.getH(z_t,X_uv,X_uf)
         return (G,H)

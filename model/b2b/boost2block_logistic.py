@@ -1,7 +1,7 @@
 #-*—coding:utf8-*-
 import quadratic_solver_matrix_logistic as QSL
-#from linear_solver import *
-import linear_solver_with_user as lsu
+from linear_solver import *
+# import linear_solver_with_user as lsu
 import pandas as pd
 import numpy as np
 import scipy.sparse as sp
@@ -13,8 +13,9 @@ import traceback
 import sys
 import datetime
 import os
-from functions import *
-from  eval_auc import *
+from data_load import *
+import data_path
+from  eval.auc import *
 
 def init_U():
     '''
@@ -24,7 +25,7 @@ def init_U():
          3. 权重暂时没有放大！！！
     '''
     
-    datapath_bpr='/home/zju/dgl/source/baseline/prfm/adabpr_code/datasets/'
+    datapath_bpr= data_path.ml_100k
     train_file=datapath_bpr+'ml_100k_occf_training.txt'
     test_file=datapath_bpr+'ml_100k_occf_testing.txt'
     train_data, Tr, Tr_neg, Te = data_process(train_file, test_file)
@@ -132,20 +133,21 @@ def train(boosting_iters,X_uv,X_uf,linear_epoc,batch_size,eta,a_1,a_3,lambda_eps
     d_dim=X_uv.shape[1]
     U,W_old,Z=initial(context_num,d_dim)
     
-    # 用户信息 
-    C=getPureContext(X_uv,context_num)
-    print 'C：',C.shape,type(C)
+    # # 用户信息
+    # C=getPureContext(X_uv,context_num)
+    # print 'C：',C.shape,type(C)
     
     # print 'U shape 17 train',U.shape,type(U)
     # create a folder to save the weight
+
     modelPath=str(datetime.datetime.now().month)+'_'+str(datetime.datetime.now().day)+'_'
     modelPath+=str(datetime.datetime.now().hour)+'_'+str(datetime.datetime.now().minute)
-    datapath='/home/zju/dgl/dataset/recommend/ml-100k/'
+    datapath= data_path.out_put
     modelPath=datapath+modelPath+'/'
-    
+
     if not os.path.exists(modelPath)and save_model:
         os.makedirs(modelPath)
-    
+
    
     old_ele_quadratic_loss=[1]*context_num
     lambda_list=[]
@@ -154,7 +156,7 @@ def train(boosting_iters,X_uv,X_uf,linear_epoc,batch_size,eta,a_1,a_3,lambda_eps
 
         #linearSolver=LinearSolver(batch_size,linear_epoc,X_uv,X_uf,Z,a_1,eta)
         start=time.time()
-        linearSolver=lsu.LinearSolver(batch_size,linear_epoc,X_uv,X_uf,Z,a_1,eta,C)
+        linearSolver=LinearSolver(batch_size,linear_epoc,X_uv,X_uf,Z,a_1,eta)
         W=linearSolver.fit()
         print 'W is finished:',W.shape,type(W),'耗时:',(time.time()-start)/60,'min'
         
@@ -176,7 +178,7 @@ def train(boosting_iters,X_uv,X_uf,linear_epoc,batch_size,eta,a_1,a_3,lambda_eps
         
         # 注释掉线性项目：
         W=W_old
-        G,H=QSL.QuadraticSolver.get_G_H(W,W_old,z_t,X_uv,X_uf,C)
+        G,H=QSL.QuadraticSolver.get_G_H(W,W_old,z_t,X_uv,X_uf)
         print '线性损失比,max={0},min={1},mean={2}'.format(max(G),min(G),np.mean(G))
         
         start=time.time()          
@@ -199,7 +201,8 @@ def train(boosting_iters,X_uv,X_uf,linear_epoc,batch_size,eta,a_1,a_3,lambda_eps
         start=time.time()  
 
         U=QSL.QuadraticSolver.updateU(lambda_t,U,G,H)
-        
+        print '###################更新结束#####################'
+
         W_old=W
         # 此条件只在第一次迭代的时候成立
         if isinstance(Z,sp.csr.csr_matrix):

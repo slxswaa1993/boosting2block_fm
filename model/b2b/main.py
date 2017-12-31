@@ -1,11 +1,16 @@
 # -*——coding:utf8-*-
+
+import sys
+sys.path.append('../utils/')
+sys.path.append('../../data/process/')
+
 import pickle
-#from boost2block import *
+# from boost2block import *
 from boost2block_logistic import *
 import time
-import sys
+import data_path
 import argparse
-from utils import data_path
+
 
 def load_data_file(train_data_file):
     '''
