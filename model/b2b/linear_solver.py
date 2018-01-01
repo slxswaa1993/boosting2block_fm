@@ -177,7 +177,66 @@ class LinearSolver(object):
         return W
 
     def fit(self):
-        W=self.updateW(batch_size=self.batch_size,epoc=self.epoc,X_uv=self.p_data,X_uf=self.n_data,
+        linear_weight=self.updateW(batch_size=self.batch_size,epoc=self.epoc,X_uv=self.p_data,X_uf=self.n_data,
                        Z=self.quadratic_term,a_1=self.linear_reg_para,eta=self.l_rate)
-        return W
+        return linear_weight
 ###########################Linear term update#####################################
+
+
+class Linear_Solver_logit(LinearSolver):
+
+    def __init__(self,batch_size,epoc,p_data,n_data,quadratic_term,linear_reg_para,l_rate):
+        '''
+        :param batch_size: 每个批度的大小
+        :param epoc: 迭代的周期
+        :param p_data: 正样本，即X_uv或者X_ci. type：csr_matrix; shape:(n,dim);每一行一个样本
+        :param n_data: 负样本，即X_uf或者X_cj. type：csr_matrix; shape:(n,dim);每一行一个样本
+        :param quadratic_term: 二次项的参数，即Z
+        :param linear_reg_para: 超参数：公式中的a_1,线性正则项参数
+        :param l_rate:超参数，公式中的eat,梯度下降的学习率
+        '''
+        self.batch_size = batch_size
+        self.epoc = epoc
+        self.p_data = p_data
+        self.n_data = n_data
+        self.quadratic_term = quadratic_term
+        self.linear_reg_para = linear_reg_para
+        self.l_rate = l_rate
+
+
+    def updateW(self,X_uv, X_uf, epoc, Z, batch_size, a_1, eta):
+
+        total_samples = X_uv.shape[0]
+        d_dim = X_uv.shape[1]
+        self.W = sp.csr_matrix(np.array([0.] * d_dim).reshape(d_dim, 1))
+        B=self.getB()
+
+
+        total_batches = int(math.ceil((1. * total_samples) / batch_size))
+        for ep in range(epoc):
+            batch_count = 0
+            start_time = time.time()
+            p_start = 0
+            p_end = batch_size
+            while p_start < total_samples:
+                if p_end > total_samples:
+                    p_end = total_samples
+                # print 'p_start:',p_start,'p_end:',p_end
+                batch_uv = X_uv[p_start:p_end]
+                batch_uf = X_uf[p_start:p_end]
+                # batch_B is csr_matrix,(n,dim)
+                batch_B = self.getB(batch_uv, batch_uf)
+                batch_lambda = self.getPAI(X_uv=batch_uv, X_uf=batch_uf, Z=Z)
+                # batch_A is csr_matrix,(1,n)
+                batch_L = np.exp(-safe_sparse_dot(B, W).todense())
+                batch_F = 1+1/(batch_lambda*batch_L)
+                assert batch_F.shape == batch_L.shape
+                batch_F_1 = 1./batch_F
+
+                self.W = self.W  - eta * (-safe_sparse_dot(batch_B.T,batch_F_1 ) + a_1 * self.W)
+
+                batch_count += 1
+                p_start = p_end
+                p_end = p_end + batch_size
+                eta = 0.9 * eta
+        return self.W

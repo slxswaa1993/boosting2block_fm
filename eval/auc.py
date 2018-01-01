@@ -28,7 +28,8 @@ def predict_b2b(W, Z, u, items):
 
     qusdratic_term = (safe_sparse_dot(safe_sparse_dot(eval_data, Z), eval_data.T)).diagonal()
 
-    return np.asarray(linear_term + qusdratic_term)[0]
+    return np.asarray(linear_term + qusdratic_term)
+    # return np.asarray(linear_term + qusdratic_term)[0]
 
 
 def getSingleContextAUC(s_c_ob, s_c_non_ob):
@@ -39,8 +40,9 @@ def getSingleContextAUC(s_c_ob, s_c_non_ob):
 
 
 def load_test_required_data():
-    test_datapath = "../data/data_set/ml-100k/bprmf_test_0_1.txt"
-    tr_datapath = "../data/data_set/ml-100k/bprmf_train_0_1.txt"
+    datapath = '/home/zju/dgl/source/project/boosting2block_fm/data/data_set/ml-100k/'
+    test_datapath = datapath+"bprmf_test_0_1.txt"
+    tr_datapath = datapath+"bprmf_train_0_1.txt"
     data = mmread(test_datapath).tocsr()
     train_data = mmread(tr_datapath).tocsr()
 

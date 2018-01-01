@@ -14,7 +14,6 @@ import sys
 import datetime
 import os
 from data_load import *
-import data_path
 from  eval.auc import *
 
 def init_U():

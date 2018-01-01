@@ -10,10 +10,9 @@ import time
 import traceback
 import gc
 import math
-import sys
-sys.path.append('../utils/')
-sys.path.append('../../data/process/')
-# import data_path
+from  process.data_load import *
+from utils.data_path import *
+from  eval.auc import *
 
 
 class Quadratic_Solver(object):
@@ -34,8 +33,9 @@ class Quadratic_Solver(object):
         :param s_dim: 输入向量的维度
         return: vv^T、eigenval
         '''
-        P = X_uv.multiply(U)
-        Q = X_uf.multiply(U)
+        U_arr = np.array(U).reshape(-1,1)
+        P = X_uv.multiply(U_arr)
+        Q = X_uf.multiply(U_arr)
 
         A = safe_sparse_dot(P.T, X_uv) - safe_sparse_dot(Q.T, X_uf)
         # print 'A.shape,type',A.shape,type(A)
@@ -111,7 +111,6 @@ class Totally_Corr(Quadratic_Solver):
 
 
     def init_u(self):
-        sys.path.append('../../data/process/')
         # datapath_bpr = data_path.ml_100k
         datapath_bpr = '/home/zju/dgl/source/project/boosting2block_fm/data/data_set/ml-100k/'
         train_file = datapath_bpr + 'ml_100k_occf_training.txt'
@@ -152,17 +151,30 @@ class Totally_Corr(Quadratic_Solver):
         p_start = 0
         p_end = self.batch_size
         total_samples = self.X_cj.shape[0]
+
+        # shuffle
+        idx=range(self.X_ci.shape[0])
+        np.random.shuffle(idx)
+        diorder_X_ci=self.X_ci[idx]
+        diorder_X_cj = self.X_cj[idx]
+
         for epoc in range(self.w_epoc):
             while p_start < total_samples:
                 if p_end > total_samples:
                     p_end = total_samples
                 # print 'p_start:',p_start,'p_end:',p_end
-                batch_P = self.X_ci[p_start:p_end]
-                batch_Q = self.X_cj[p_start:p_end]
+                batch_P = diorder_X_ci[p_start:p_end]
+                batch_Q = diorder_X_cj[p_start:p_end]
                 H = self.getH(batch_P, batch_Q)
                 Rou = self.get_Rou(H)
                 M = -1./(1 + np.exp(Rou))
-                self.mat_weight_list[:self.current_j] -= self.eta * (self.reg_v + np.dot(M.T, H))
+
+                # temp_q=np.dot(M.T, H)
+                # temp_b=self.reg_v + np.asarray(np.dot(M.T, H))[0]
+                self.mat_weight_list[:self.current_j] -= self.eta * ((self.reg_v + np.asarray(np.dot(M.T, H))))[0]
+
+                p_start = p_end
+                p_end = p_end + self.batch_size
 
 
     def update_sample_weight(self,P,Q):
@@ -170,56 +182,165 @@ class Totally_Corr(Quadratic_Solver):
         Rou = self.get_Rou(H)
         self.sample_weight = 1./(1 + np.exp(Rou))
 
+    def getZ(self):
+        Z=None
+        for j in range(self.current_j):
+            w = self.mat_weight_list[j]
+            if Z is None:
+                Z=w*self.z_list[j]
+            else:
+                Z+=w*self.z_list[j]
+            # j+=1
+        return Z
+
     def fit(self):
 
         for iter in range(self.maxiters):
             # 注意这里的sample_weight 每次要不要放大，第一次必须放大
-
+            start=time.time()
+            print '####iter-{0}######'.format(iter)
             self.current_j = iter+1
 
+            print '####特征分解.....######'
             z_t, eigenval = self.getComponentZ_eigval(self.sample_weight,self.X_ci,self.X_cj)
+            print 'eigenval={0}'.format(eigenval)
             if eigenval < self.reg_v:
+                Z=self.getZ()
+                auc = predic_auc(np.zeros(Z.shape[0]), Z)
+                print "auc:", auc
+                break
+
+
+            self.z_list.append(z_t)
+
+            print '####更新模型权重.....######'
+            time_u=time.time()
+            self.update_mat_weight()
+            print '耗时={0}'.format(time.time()-time_u)
+
+            print '####更新样本权重.....######'
+            time_u = time.time()
+            self.update_sample_weight(self.X_ci,self.X_cj)
+            print '耗时={0}'.format(time.time() - time_u)
+
+            if iter!=0 and iter%2 == 0:
+                Z=self.getZ()
+                auc = predic_auc(np.zeros(Z.shape[0]), Z)
+                print "auc:", auc
+
+            print 'len(W)={0}'.format(len(self.mat_weight_list))
+            print self.mat_weight_list
+            print '总共耗时={0} s'.format(time.time()-start)
+
+    # def fit(self):
+
+class Totally_Corr_with_linear(Totally_Corr):
+
+
+    def __init__(self,maxiters,reg_V,w_eta,w_epoc,X_ci,X_cj,batch_size,linear_weight):
+        self.mat_weight_list = np.zeros(maxiters)
+        self.maxiters = maxiters
+        self.z_list=[]
+        self.reg_v=reg_V
+        # 1-index
+        self.current_j=0
+        self.eta = w_eta
+        self.w_epoc = w_epoc
+        self.batch_size=batch_size
+        self.sample_weight= self.init_u()
+        self.X_ci = X_ci
+        self.X_cj = X_cj
+        self.linear_weight = linear_weight
+
+    def get_linear_value(self,P,Q):
+        L=np.mat(self.linear_weight.reshape(-1,1))
+        return np.exp(safe_sparse_dot((Q - P), L))
+
+    def update_sample_weight(self,P,Q):
+        H=self.getH(P,Q)
+        Rou = self.get_Rou(H)
+        Beta= self.get_linear_value(P,Q)
+        Beta_1=1./Beta
+        assert Beta_1.shape == Rou.shape
+        self.sample_weight = 1./(Beta_1 + np.exp(Rou))
+
+    def update_mat_weight(self):
+        '''
+        <H,W>
+        current_j 1-index
+        :param H:
+        :return:
+        '''
+        # <H,W>,(n,1)
+        batch_count = 0
+        p_start = 0
+        p_end = self.batch_size
+        total_samples = self.X_cj.shape[0]
+
+        # shuffle
+        idx=range(self.X_ci.shape[0])
+        np.random.shuffle(idx)
+        diorder_X_ci=self.X_ci[idx]
+        diorder_X_cj = self.X_cj[idx]
+
+        for epoc in range(self.w_epoc):
+            while p_start < total_samples:
+                if p_end > total_samples:
+                    p_end = total_samples
+                # print 'p_start:',p_start,'p_end:',p_end
+                batch_P = diorder_X_ci[p_start:p_end]
+                batch_Q = diorder_X_cj[p_start:p_end]
+                H = self.getH(batch_P, batch_Q)
+                Rou = self.get_Rou(H)
+                #todo 可以优化，在外面计算好，但是考虑数据乱序
+                Beta = self.get_linear_value(batch_P, batch_Q)
+                Beta_1 = 1. / Beta
+                M = -1./(Beta_1 + np.exp(Rou))
+
+                # temp_q=np.dot(M.T, H)
+                # temp_b=self.reg_v + np.asarray(np.dot(M.T, H))[0]
+                self.mat_weight_list[:self.current_j] -= self.eta * ((self.reg_v + np.asarray(np.dot(M.T, H))))[0]
+
+                p_start = p_end
+                p_end = p_end + self.batch_size
+
+
+
+
+    def fit(self):
+
+        for iter in range(self.maxiters):
+            # 注意这里的sample_weight 每次要不要放大，第一次必须放大
+            start=time.time()
+            print '####iter-{0}######'.format(iter)
+            self.current_j = iter+1
+
+            print '####特征分解.....######'
+            z_t, eigenval = self.getComponentZ_eigval(self.sample_weight,self.X_ci,self.X_cj)
+            print 'eigenval={0}'.format(eigenval)
+            if eigenval < self.reg_v:
+                Z=self.getZ()
+                auc = predic_auc(np.zeros(Z.shape[0]), Z)
+                print "auc:", auc
                 break
 
             self.z_list.append(z_t)
 
+            print '####更新模型权重.....######'
+            time_u=time.time()
             self.update_mat_weight()
+            print '耗时={0}'.format(time.time()-time_u)
 
+            print '####更新样本权重.....######'
+            time_u = time.time()
             self.update_sample_weight(self.X_ci,self.X_cj)
+            print '耗时={0}'.format(time.time() - time_u)
 
-    # def fit(self):
+            if iter!=0 and iter%2 == 0:
+                Z=self.getZ()
+                auc = predic_auc(np.zeros(Z.shape[0]), Z)
+                print "auc:", auc
 
-
-
-
-
-if __name__=='__main__':
-
-    def load_data_file(train_data_file):
-        '''
-        从文件加载处理好的数据
-        '''
-        fi = open(train_data_file, 'rb')
-        X_ci = pickle.load(fi)
-        X_cj = pickle.load(fi)
-        fi.close()
-        X_ci = sp.csr_matrix(X_ci)
-        X_cj = sp.csr_matrix(X_cj)
-        return X_ci, X_cj
-
-
-    # datapath = data_path.ml_100k
-    datapath = '/home/zju/dgl/source/project/boosting2block_fm/data/data_set/ml-100k/'
-    train_data_file = datapath + 'from_synthetic_data_csv.pkl'
-    X_ci, X_cj = load_data_file(train_data_file)
-
-    maxiters = 100
-    reg_V = 0.001
-    w_eta = 0.001
-    w_epoc = 15
-    batch_size = 1000
-
-    qs = Totally_Corr(maxiters,reg_V,w_eta,w_epoc,X_ci,X_cj,batch_size)
-
-    qs.fit()
-
+            print 'len(W)={0}'.format(len(self.mat_weight_list))
+            print self.mat_weight_list
+            print '总共耗时={0} s'.format(time.time()-start)
