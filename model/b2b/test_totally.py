@@ -22,7 +22,6 @@ class Algorithm(object):
         train_data_file = datapath + train_data_file
         self.X_ci,self.X_cj=self.load_data_file(train_data_file)
 
-
     def set_args(self):
 
         # 两区块，迭代次数
@@ -63,7 +62,7 @@ class Algorithm(object):
         只使用二次项
         :return:
         '''
-        qs = Totally_Corr(self.maxiters,self.reg_V,self.w_eta,self.w_epoc,self.X_ci,self.X_cj,self.batch_size_2)
+        qs = Totally_Corr(self.maxiters_2,self.reg_V,self.w_eta,self.w_epoc,self.X_ci,self.X_cj,self.batch_size_2)
         qs.fit()
         return qs.getZ()
 
@@ -72,19 +71,17 @@ class Algorithm(object):
         '''
         :return:
         '''
-
         # exp(-Rou)
         quadratic_term = 1.
         for iter in range(self.total_iters):
 
-            ls = Linear_Solver_logit(self.batch_size_linear,self.epoc,
+            ls = Linear_Solver_logit(self.batch_size_linear,self.linear_epoc,
                                  self.X_ci,self.X_cj,quadratic_term,self.linear_epoc,self.linear_epoc)
 
             linear_weight = ls.fit()
 
             qs = Totally_Corr_with_linear(self.maxiters,self.reg_V,self.w_eta,self.w_epoc,self.X_ci,self.X_cj,
                                           self.batch_size_2,linear_weight)
-
             qs.fit()
 
             return (linear_weight,qs.getZ())
@@ -92,33 +89,40 @@ class Algorithm(object):
 
 if __name__=='__main__':
 
-    def load_data_file(train_data_file):
-        '''
-        从文件加载处理好的数据
-        '''
-        fi = open(train_data_file, 'rb')
-        X_ci = pickle.load(fi)
-        X_cj = pickle.load(fi)
-        fi.close()
-        X_ci = sp.csr_matrix(X_ci)
-        X_cj = sp.csr_matrix(X_cj)
-        return X_ci, X_cj
 
-    datapath = data_path.ml_100k
-    # datapath = '/home/zju/dgl/source/project/boosting2block_fm/data/data_set/ml-100k/'
-    train_data_file = datapath + 'from_synthetic_data_csv.pkl'
-    X_ci, X_cj = load_data_file(train_data_file)
+    alg=Algorithm('from_synthetic_data_csv.pkl')
+    alg.set_args()
+    # alg.only_qudratic()
+    alg.two_block_algortihm()
 
-    maxiters = 100
-    reg_V = 0.001
-    w_eta = 0.01
-    w_epoc = 20
-    batch_size = 100
 
-    start=time.time()
-    qs = Totally_Corr(maxiters,reg_V,w_eta,w_epoc,X_ci,X_cj,batch_size)
-    qs.fit()
-
-    with open('model.pkl','wb') as fo:
-        pickle.dump(qs,fo)
-    print "train_end! time:={0}".format(time.time()-start)
+    # def load_data_file(train_data_file):
+    #     '''
+    #     从文件加载处理好的数据
+    #     '''
+    #     fi = open(train_data_file, 'rb')
+    #     X_ci = pickle.load(fi)
+    #     X_cj = pickle.load(fi)
+    #     fi.close()
+    #     X_ci = sp.csr_matrix(X_ci)
+    #     X_cj = sp.csr_matrix(X_cj)
+    #     return X_ci, X_cj
+    #
+    # datapath = data_path.ml_100k
+    # # datapath = '/home/zju/dgl/source/project/boosting2block_fm/data/data_set/ml-100k/'
+    # train_data_file = datapath + 'from_synthetic_data_csv.pkl'
+    # X_ci, X_cj = load_data_file(train_data_file)
+    #
+    # maxiters = 100
+    # reg_V = 0.001
+    # w_eta = 0.01
+    # w_epoc = 20
+    # batch_size = 100
+    #
+    # start=time.time()
+    # qs = Totally_Corr(maxiters,reg_V,w_eta,w_epoc,X_ci,X_cj,batch_size)
+    # qs.fit()
+    #
+    # with open('model.pkl','wb') as fo:
+    #     pickle.dump(qs,fo)
+    # print "train_end! time:={0}".format(time.time()-start)
