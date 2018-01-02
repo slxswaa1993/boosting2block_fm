@@ -112,7 +112,7 @@ class Totally_Corr(Quadratic_Solver):
 
     def init_u(self):
         # datapath_bpr = data_path.ml_100k
-        datapath_bpr = '/home/zju/dgl/source/project/boosting2block_fm/data/data_set/ml-100k/'
+        datapath_bpr = '/home/zju/slx/PycharmProjects/boosting2block_fm/data/data_set/ml-100k/'
         train_file = datapath_bpr + 'ml_100k_occf_training.txt'
         test_file = datapath_bpr + 'ml_100k_occf_testing.txt'
         train_data, Tr, Tr_neg, Te = data_process(train_file, test_file)
@@ -338,7 +338,7 @@ class Totally_Corr_with_linear(Totally_Corr):
 
             if iter!=0 and iter%2 == 0:
                 Z=self.getZ()
-                auc = predic_auc(np.zeros(Z.shape[0]), Z)
+                auc = predic_auc(self.linear_weight, Z)
                 print "auc:", auc
 
             print 'len(W)={0}'.format(len(self.mat_weight_list))

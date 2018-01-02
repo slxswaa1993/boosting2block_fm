@@ -34,13 +34,15 @@ def predict_b2b(W, Z, u, items):
 
 def getSingleContextAUC(s_c_ob, s_c_non_ob):
     acc = 0.0
+    s_c_non_ob = np.ravel(s_c_non_ob)
+    s_c_ob = np.ravel(s_c_ob)
     for s_ci in s_c_ob:
         acc += np.sum(s_c_non_ob < s_ci)
     return acc / (len(s_c_ob) * len(s_c_non_ob))
 
 
 def load_test_required_data():
-    datapath = '/home/zju/dgl/source/project/boosting2block_fm/data/data_set/ml-100k/'
+    datapath = '/home/zju/slx/PycharmProjects/boosting2block_fm/data/data_set/ml-100k/'
     test_datapath = datapath+"bprmf_test_0_1.txt"
     tr_datapath = datapath+"bprmf_train_0_1.txt"
     data = mmread(test_datapath).tocsr()
