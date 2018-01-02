@@ -198,7 +198,7 @@ def trian_MBGD(latent_dim, input_dim, X_ci, X_cj, w_lambda, v_lambda, eta, batch
         #                     print("Step:%d,loss:%.5f"%(batch_count,obj_fun_loss))
         #             print 'saving...'
         #             save_model(W,V,ep,modelPath)
-        if ep % 10 == 0:
+        if ep!=0 and ep % 10 == 0:
             uc = predic_auc(W, np.dot(V, V.T))
             print("epoc:%d,auc:%.5f" % (ep, uc))
     return W, V
@@ -218,7 +218,8 @@ def load_data_file(train_data_file):
 if __name__=="__main__":
 
     datapath = data_path.ml_100k
-    train_data_file = datapath + 'from_synthetic_data_csv.pkl'
+    # train_data_file = datapath + 'from_synthetic_data_csv.pkl'
+    train_data_file = '/home/zju/dgl/source/project/boosting2block_fm/data/data_set/jester-2/' + 'jester-2_X_ci_X_cj.pkl'
     X_ci, X_cj = load_data_file(train_data_file)
 
     latent_dim=50

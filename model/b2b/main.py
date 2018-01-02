@@ -1,14 +1,14 @@
 # -*——coding:utf8-*-
 
 import sys
-sys.path.append('../utils/')
-sys.path.append('../../data/process/')
+if not '/home/zju/dgl/source/project/boosting2block_fm/utils/' in sys.path:
+    sys.path.append('/home/zju/dgl/source/project/boosting2block_fm/')
 
 import pickle
 # from boost2block import *
 from boost2block_logistic import *
 import time
-import data_path
+from utils import  data_path
 import argparse
 
 
@@ -51,10 +51,15 @@ if __name__=='__main__':
     flod_name=args.flod_name
     
     flod_name='bpr'
+    # datapath = data_path.ml_100k
+    # #train_data_file = datapath+'bpr_orderd_short.pkl'
+    # train_data_file = datapath+'from_synthetic_data_csv.pkl'
+
     datapath = data_path.ml_100k
-    #train_data_file = datapath+'bpr_orderd_short.pkl'
-    train_data_file = datapath+'from_synthetic_data_csv.pkl'
-    
+    # train_data_file = datapath + 'from_synthetic_data_csv.pkl'
+    train_data_file = '/home/zju/dgl/source/project/boosting2block_fm/data/data_set/jester-2/' + 'jester-2_X_ci_X_cj.pkl'
+    X_ci, X_cj = load_data_file(train_data_file)
+
     X_ci, X_cj=load_data_file(train_data_file)
     print "X_ci:",X_ci.shape
     context_num=X_ci.shape[0]
@@ -65,19 +70,19 @@ if __name__=='__main__':
     
     start=time.time()
     ## 注意的X_uv和X_uf的赋值
-    
+
     ## 参数调试
-    W,Z=train(boosting_iters=args.iters, 
-                          X_uv=X_ci[:context_num],
-                          X_uf=X_cj[:context_num],
-                          linear_epoc=args.lepoc, 
-                          batch_size=args.batch_size, 
-                          eta=args.eta,
-                          a_1=args.alpha_1, 
-                          a_3=args.alpha_3, 
-                          lambda_epsilon=args.epsilon, 
-                          context_num=context_num,
-                          save_model=args.isSave)
-    
+    W, Z = train(boosting_iters=args.iters,
+                 X_uv=X_ci[:context_num],
+                 X_uf=X_cj[:context_num],
+                 linear_epoc=args.lepoc,
+                 batch_size=args.batch_size,
+                 eta=args.eta,
+                 a_1=args.alpha_1,
+                 a_3=args.alpha_3,
+                 lambda_epsilon=args.epsilon,
+                 context_num=context_num,
+                 save_model=args.isSave)
+
     print 'Training end,total time:',(time.time()-start)/60,'min'
     print 'Done!'
