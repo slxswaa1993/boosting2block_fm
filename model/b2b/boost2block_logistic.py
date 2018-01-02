@@ -13,10 +13,12 @@ import traceback
 import sys
 import datetime
 import os
-from data_load import *
+# from data_load import *
 from  eval.auc import *
+from utils import  data_path
+from process.data_load import *
 
-def init_U():
+def init_U_ml_100k():
     '''
      U 的初始权重分配：
          1. 以用户为单位进行分配
@@ -33,10 +35,30 @@ def init_U():
     return D
 
 
+def init_U_jester_2(num_samples):
+    '''
+     U 的初始权重分配：
+         1. 以用户为单位进行分配
+         2. 观测样本少的用户，权重大
+         3. 权重暂时没有放大！！！
+    '''
+
+    # datapath_bpr = data_path.ml_100k
+    # train_file = datapath_bpr + 'ml_100k_occf_training.txt'
+    # test_file = datapath_bpr + 'ml_100k_occf_testing.txt'
+    # train_data, Tr, Tr_neg, Te = data_process(train_file, test_file)
+    # D0 = np.array([1.0 / float(Tr[u]['num']) for u, i in train_data])
+    # D = (D0 / np.sum(D0))
+    D = np.array([1./num_samples]*num_samples)
+    return D
+
 def initial(context_num,d_dim):
     #U=np.array([1./context_num]*context_num)
-    U=init_U()
+    # U=init_U_ml_100k()
+
+    U=init_U_jester_2(context_num)
     U=np.asmatrix(U).T
+
     ## W_old 设为0
     W_old=sp.csr_matrix(np.random.uniform(low=0./d_dim, high=0./d_dim, size=d_dim).reshape(d_dim,1))
     ## W_old 设为单位矩阵
@@ -144,8 +166,8 @@ def train(boosting_iters,X_uv,X_uf,linear_epoc,batch_size,eta,a_1,a_3,lambda_eps
     datapath= data_path.out_put
     modelPath=datapath+modelPath+'/'
 
-    if not os.path.exists(modelPath)and save_model:
-        os.makedirs(modelPath)
+    # if not os.path.exists(modelPath)and save_model:
+    #     os.makedirs(modelPath)
 
    
     old_ele_quadratic_loss=[1]*context_num
@@ -170,7 +192,7 @@ def train(boosting_iters,X_uv,X_uf,linear_epoc,batch_size,eta,a_1,a_3,lambda_eps
             start=time.time()
             auc=predic_auc(W,Z)
             print "auc:",auc,'耗时:',(time.time()-start)/60,'min'
-            save2pkl(iter_count,'u1',modelPath,Z,W)
+           # save2pkl(iter_count,'u1',modelPath,Z,W)
             break;       
         
         print '#####################模型权重更新#####################'
